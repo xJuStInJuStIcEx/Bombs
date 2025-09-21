@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Bombe — prototipo MVP</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <div id="game-root">
+    <!-- HUD -->
+    <header id="hud">
+      <div id="hud-left">
+        <div id="score">Punteggio: <span id="score-value">0</span></div>
+        <div id="level">Livello: <span id="level-value">1</span></div>
+      </div>
+      <div id="hud-center">
+        <div id="timer">Tempo: <span id="timer-value">60</span>s</div>
+      </div>
+      <div id="hud-right">
+        <div id="counter"><span id="disarmed">0</span>/<span id="required">5</span></div>
+        <div id="bonuses-bar"></div>
+      </div>
+    </header>
+
+    <!-- Game area -->
+    <main id="play-area" aria-live="polite"></main>
+
+    <!-- Overlays -->
+    <div id="overlay" class="hidden">
+      <div id="overlay-panel">
+        <h2 id="overlay-title">Risultato</h2>
+        <p id="overlay-stats"></p>
+        <div class="overlay-actions">
+          <button id="btn-restart">Ricomincia livello</button>
+          <button id="btn-next" class="hidden">Avanti (Livello successivo)</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Small instructions -->
+    <footer id="footer">
+      <small>Tocca/clicca le bombe per disinnescarle. Se esplode una bomba, il punteggio viene dimezzato (salvo scudo attivo).</small>
+    </footer>
+  </div>
+
+  <script src="js/game.js" type="module"></script>
+</body>
+</html>
