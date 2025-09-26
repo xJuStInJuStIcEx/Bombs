@@ -1150,75 +1150,112 @@ function init(){
 }
 
 
-// ---------------- DEBUG OVERLAY (smartphone friendly) ----------------
-// Incollare questo blocco PRIMA della riga `init();` in fondo a js/game.js
+// ---------------- SAFE DEBUG OVERLAY (mobile-friendly) ----------------
 (function(){
-  // crea overlay di debug (visibile nello schermo)
-  const dbg = document.createElement('div');
-  dbg.id = '__game_debug_overlay';
-  dbg.style.position = 'fixed';
-  dbg.style.right = '8px';
-  dbg.style.bottom = '8px';
-  dbg.style.zIndex = '99999';
-  dbg.style.maxWidth = '42vw';
-  dbg.style.maxHeight = '48vh';
-  dbg.style.overflow = 'auto';
-  dbg.style.fontSize = '11px';
-  dbg.style.background = 'rgba(0,0,0,0.55)';
-  dbg.style.color = '#fff';
-  dbg.style.padding = '8px';
-  dbg.style.borderRadius = '8px';
-  dbg.style.backdropFilter = 'blur(4px)';
-  dbg.style.boxShadow = '0 6px 18px rgba(0,0,0,0.6)';
-  dbg.style.lineHeight = '1.2';
-  dbg.style.fontFamily = 'monospace';
-  dbg.innerHTML = '<strong style="display:block;margin-bottom:6px">DBG</strong>';
-  document.body.appendChild(dbg);
-
-  // helper per aggiungere messaggi
-  window.debugLog = function(txt){
-    const p = document.createElement('div');
-    p.textContent = `${(new Date()).toLocaleTimeString()} · ${txt}`;
-    dbg.appendChild(p);
-    // scroll to bottom
-    dbg.scrollTop = dbg.scrollHeight;
-    // limit entries
-    if(dbg.children.length > 80) dbg.removeChild(dbg.children[1]);
-  };
-
-  // esposizione helpers utili
-  window._GAME_STATE = state;
-  window._spawnBomb = spawnBomb;
-
-  // wrap (monkey-patch) alcune funzioni per loggare eventi importanti
-  // Nota: questo blocco deve essere nello stesso modulo (per questo lo incolliamo nel file)
-  if(typeof triggerExplosion === 'function'){
-    const _origTrigger = triggerExplosion;
-    triggerExplosion = function(id, chained = false){
-      window.debugLog(`triggerExplosion id=${id} chained=${chained}`);
-      return _origTrigger(id, chained);
-    };
-    window.debugLog('triggerExplosion wrapped');
-  } else {
-    window.debugLog('triggerExplosion non trovato');
+  function createOverlay(){
+    const existing = document.getElementById('__game_debug_overlay');
+    if(existing) return existing;
+    const dbg = document.createElement('div');
+    dbg.id = '__game_debug_overlay';
+    dbg.style.position = 'fixed';
+    dbg.style.right = '8px';
+    dbg.style.bottom = '8px';
+    dbg.style.zIndex = '99999';
+    dbg.style.maxWidth = '42vw';
+    dbg.style.maxHeight = '48vh';
+    dbg.style.overflow = 'auto';
+    dbg.style.fontSize = '11px';
+    dbg.style.background = 'rgba(0,0,0,0.55)';
+    dbg.style.color = '#fff';
+    dbg.style.padding = '8px';
+    dbg.style.borderRadius = '8px';
+    dbg.style.backdropFilter = 'blur(4px)';
+    dbg.style.boxShadow = '0 6px 18px rgba(0,0,0,0.6)';
+    dbg.style.lineHeight = '1.2';
+    dbg.style.fontFamily = 'monospace';
+    dbg.innerHTML = '<strong style="display:block;margin-bottom:6px">DBG</strong>';
+    document.body.appendChild(dbg);
+    return dbg;
   }
 
-  if(typeof updateExplosions === 'function'){
-    const _origUpdate = updateExplosions;
-    updateExplosions = function(){
-      // snapshot stato prima
-      const exBefore = state.explosions.length;
-      _origUpdate();
-      const exAfter = state.explosions.length;
-      if(exBefore !== exAfter) window.debugLog(`explosions ${exBefore} → ${exAfter}`);
-    };
-    window.debugLog('updateExplosions wrapped');
-  } else {
-    window.debugLog('updateExplosions non trovato');
+  function safeInstall(){
+    try{
+      const dbg = createOverlay();
+
+      // helper per aggiungere messaggi
+      window.debugLog = function(txt){
+        try{
+          const p = document.createElement('div');
+          p.textContent = `${(new Date()).toLocaleTimeString()} · ${txt}`;
+          dbg.appendChild(p);
+          dbg.scrollTop = dbg.scrollHeight;
+          if(dbg.children.length > 90) dbg.removeChild(dbg.children[1]);
+        }catch(e){ console.warn('debugLog error', e); }
+      };
+
+      // esposizione helpers non invasiva (se le variabili esistono)
+      try{ if(typeof state !== 'undefined') window._GAME_STATE = state; }catch(e){}
+      try{ if(typeof spawnBomb !== 'undefined') window._spawnBomb = spawnBomb; }catch(e){}
+
+      window.debugLog('DEBUG overlay installed. Attendi spawn / esplosioni.');
+
+      // Polling per patchare le funzioni solo quando esistono, senza lanciare errori
+      const start = Date.now();
+      const maxWait = 2000; // ms
+      const iv = setInterval(()=>{
+        try{
+          const foundTrigger = (typeof triggerExplosion === 'function');
+          const foundUpdate = (typeof updateExplosions === 'function');
+
+          if(foundTrigger || foundUpdate){
+            // patch solo le funzioni trovate
+            if(foundTrigger){
+              try{
+                const _origTrigger = triggerExplosion;
+                triggerExplosion = function(id, chained = false){
+                  window.debugLog(`triggerExplosion id=${id} chained=${chained}`);
+                  return _origTrigger(id, chained);
+                };
+                window.debugLog('triggerExplosion wrapped');
+              }catch(e){ window.debugLog('wrap triggerExplosion failed'); }
+            }
+
+            if(foundUpdate){
+              try{
+                const _origUpdate = updateExplosions;
+                updateExplosions = function(){
+                  const before = (typeof state !== 'undefined' && state.explosions) ? state.explosions.length : 0;
+                  _origUpdate();
+                  const after = (typeof state !== 'undefined' && state.explosions) ? state.explosions.length : 0;
+                  if(before !== after) window.debugLog(`explosions ${before} → ${after}`);
+                };
+                window.debugLog('updateExplosions wrapped');
+              }catch(e){ window.debugLog('wrap updateExplosions failed'); }
+            }
+
+            clearInterval(iv);
+          } else if(Date.now() - start > maxWait){
+            window.debugLog('patch timeout: funzioni non trovate (continua senza patch)');
+            clearInterval(iv);
+          }
+        }catch(err){
+          console.warn('DBG poll error', err);
+          clearInterval(iv);
+        }
+      }, 100);
+    }catch(err){
+      console.error('SAFE DEBUG INSTALL ERROR', err);
+      // non fare nulla: non interrompere il gioco
+    }
   }
 
-  window.debugLog('DEBUG overlay installed. Tocca "Avvia" e osserva i messaggi.');
+  if(document.readyState === 'complete' || document.readyState === 'interactive'){
+    safeInstall();
+  } else {
+    document.addEventListener('DOMContentLoaded', safeInstall);
+  }
 })();
+// ---------------- end SAFE DEBUG OVERLAY ----------------
 
 
 init();
