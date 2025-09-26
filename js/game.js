@@ -520,29 +520,14 @@ function gameLoop(){
   requestAnimationFrame(gameLoop);
 }
 
-// --- Init and start button ---
-function init(){
+// --- Expose functions globally for fallback button ---
+window.startLevel = startLevel;
+window.gameLoop = gameLoop;
+window.audioCtx = audioCtx;
+
+// --- Initialize game state ---
+document.addEventListener('DOMContentLoaded', function() {
   state.required = requiredForLevel(state.level);
   updateRequiredUI();
   updateLevelUI();
-
-  const startBtn = document.createElement('button');
-  startBtn.textContent = 'Avvia (clicca/tocca per iniziare)';
-  startBtn.style.position = 'absolute';
-  startBtn.style.left = '50%';
-  startBtn.style.top = '50%';
-  startBtn.style.transform = 'translate(-50%,-50%)';
-  startBtn.style.zIndex = 9999;
-  startBtn.style.padding = '12px 16px';
-  startBtn.style.borderRadius = '10px';
-  playArea.appendChild(startBtn);
-
-  startBtn.addEventListener('click', async () => {
-    if(audioCtx.state === 'suspended') try{ await audioCtx.resume(); }catch(e){}
-    startBtn.remove();
-    startLevel(1);
-    requestAnimationFrame(gameLoop);
-  });
-}
-
-init();
+});
