@@ -1,3 +1,6 @@
+// Attendi che il DOM sia completamente caricato
+document.addEventListener('DOMContentLoaded', function() {
+
 // --- DOM refs ---
 const playArea = document.getElementById('play-area');
 const scoreEl = document.getElementById('score-value');
@@ -11,6 +14,10 @@ const overlayStats = document.getElementById('overlay-stats');
 const btnRestart = document.getElementById('btn-restart');
 const btnNext = document.getElementById('btn-next');
 const bonusesBar = document.getElementById('bonuses-bar');
+
+// Rimuovi il pulsante di fallback esistente se presente
+const existingFallback = document.getElementById('start-fallback');
+if(existingFallback) existingFallback.remove();
 
 // --- State ---
 let state = {
@@ -520,14 +527,34 @@ function gameLoop(){
   requestAnimationFrame(gameLoop);
 }
 
-// --- Expose functions globally for fallback button ---
-window.startLevel = startLevel;
-window.gameLoop = gameLoop;
-window.audioCtx = audioCtx;
+// --- Initialize and create start button ---
+state.required = requiredForLevel(state.level);
+updateRequiredUI();
+updateLevelUI();
 
-// --- Initialize game state ---
-document.addEventListener('DOMContentLoaded', function() {
-  state.required = requiredForLevel(state.level);
-  updateRequiredUI();
-  updateLevelUI();
+const startBtn = document.createElement('button');
+startBtn.textContent = 'Avvia Gioco';
+startBtn.style.position = 'absolute';
+startBtn.style.left = '50%';
+startBtn.style.top = '50%';
+startBtn.style.transform = 'translate(-50%,-50%)';
+startBtn.style.zIndex = '9999';
+startBtn.style.padding = '12px 20px';
+startBtn.style.borderRadius = '8px';
+startBtn.style.border = 'none';
+startBtn.style.backgroundColor = '#ffcc00';
+startBtn.style.color = '#111';
+startBtn.style.fontWeight = '700';
+startBtn.style.cursor = 'pointer';
+playArea.appendChild(startBtn);
+
+startBtn.addEventListener('click', async () => {
+  if(audioCtx.state === 'suspended') {
+    try{ await audioCtx.resume(); }catch(e){}
+  }
+  startBtn.remove();
+  startLevel(1);
+  requestAnimationFrame(gameLoop);
 });
+
+}); // Fine del DOMContentLoaded
