@@ -24,7 +24,21 @@
     </header>
 
     <!-- Game area -->
-    <main id="play-area" aria-live="polite"></main>
+    <main id="play-area" aria-live="polite">
+<!-- BUTTON DI FALLBACK (temporaneo) -->
+<button id="start-fallback" style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:9999;padding:12px 16px;border-radius:10px;">
+  Avvia (fallback)
+</button>
+<script>
+  // Se startLevel esiste, prova ad avviare al tocco (non rompe nulla se startLevel non definita)
+  document.getElementById('start-fallback').addEventListener('click', async function(){
+    try{ if(window.audioCtx && audioCtx.state === 'suspended') await audioCtx.resume(); }catch(e){}
+    if(typeof startLevel === 'function') startLevel(1);
+    if(typeof gameLoop === 'function') requestAnimationFrame(gameLoop);
+    this.remove();
+  });
+</script>
+    </main>
 
     <!-- Overlays -->
     <div id="overlay" class="hidden">
