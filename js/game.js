@@ -1149,4 +1149,76 @@ function init(){
   });
 }
 
+
+// ---------------- DEBUG OVERLAY (smartphone friendly) ----------------
+// Incollare questo blocco PRIMA della riga `init();` in fondo a js/game.js
+(function(){
+  // crea overlay di debug (visibile nello schermo)
+  const dbg = document.createElement('div');
+  dbg.id = '__game_debug_overlay';
+  dbg.style.position = 'fixed';
+  dbg.style.right = '8px';
+  dbg.style.bottom = '8px';
+  dbg.style.zIndex = '99999';
+  dbg.style.maxWidth = '42vw';
+  dbg.style.maxHeight = '48vh';
+  dbg.style.overflow = 'auto';
+  dbg.style.fontSize = '11px';
+  dbg.style.background = 'rgba(0,0,0,0.55)';
+  dbg.style.color = '#fff';
+  dbg.style.padding = '8px';
+  dbg.style.borderRadius = '8px';
+  dbg.style.backdropFilter = 'blur(4px)';
+  dbg.style.boxShadow = '0 6px 18px rgba(0,0,0,0.6)';
+  dbg.style.lineHeight = '1.2';
+  dbg.style.fontFamily = 'monospace';
+  dbg.innerHTML = '<strong style="display:block;margin-bottom:6px">DBG</strong>';
+  document.body.appendChild(dbg);
+
+  // helper per aggiungere messaggi
+  window.debugLog = function(txt){
+    const p = document.createElement('div');
+    p.textContent = `${(new Date()).toLocaleTimeString()} · ${txt}`;
+    dbg.appendChild(p);
+    // scroll to bottom
+    dbg.scrollTop = dbg.scrollHeight;
+    // limit entries
+    if(dbg.children.length > 80) dbg.removeChild(dbg.children[1]);
+  };
+
+  // esposizione helpers utili
+  window._GAME_STATE = state;
+  window._spawnBomb = spawnBomb;
+
+  // wrap (monkey-patch) alcune funzioni per loggare eventi importanti
+  // Nota: questo blocco deve essere nello stesso modulo (per questo lo incolliamo nel file)
+  if(typeof triggerExplosion === 'function'){
+    const _origTrigger = triggerExplosion;
+    triggerExplosion = function(id, chained = false){
+      window.debugLog(`triggerExplosion id=${id} chained=${chained}`);
+      return _origTrigger(id, chained);
+    };
+    window.debugLog('triggerExplosion wrapped');
+  } else {
+    window.debugLog('triggerExplosion non trovato');
+  }
+
+  if(typeof updateExplosions === 'function'){
+    const _origUpdate = updateExplosions;
+    updateExplosions = function(){
+      // snapshot stato prima
+      const exBefore = state.explosions.length;
+      _origUpdate();
+      const exAfter = state.explosions.length;
+      if(exBefore !== exAfter) window.debugLog(`explosions ${exBefore} → ${exAfter}`);
+    };
+    window.debugLog('updateExplosions wrapped');
+  } else {
+    window.debugLog('updateExplosions non trovato');
+  }
+
+  window.debugLog('DEBUG overlay installed. Tocca "Avvia" e osserva i messaggi.');
+})();
+
+
 init();
