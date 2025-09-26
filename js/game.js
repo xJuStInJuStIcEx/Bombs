@@ -1,3 +1,122 @@
+// --- DEBUG/RECOVERY SNIPPET (inserire ESATTAMENTE in cima a js/game.js) ---
+(function(){
+  // small visual overlay for errors and logs
+  function makeOverlay(){
+    if(document.getElementById('__mini_err_overlay')) return document.getElementById('__mini_err_overlay');
+    const o = document.createElement('div');
+    o.id = '__mini_err_overlay';
+    o.style.position = 'fixed';
+    o.style.left = '8px';
+    o.style.top = '8px';
+    o.style.zIndex = 2147483647;
+    o.style.maxWidth = '92vw';
+    o.style.maxHeight = '48vh';
+    o.style.overflow = 'auto';
+    o.style.background = 'rgba(0,0,0,0.75)';
+    o.style.color = '#fff';
+    o.style.padding = '8px';
+    o.style.borderRadius = '8px';
+    o.style.fontSize = '12px';
+    o.style.fontFamily = 'monospace';
+    o.style.lineHeight = '1.2';
+    o.style.boxShadow = '0 8px 30px rgba(0,0,0,0.6)';
+    o.innerHTML = '<strong style="display:block;margin-bottom:6px">ERRORS / DEBUG</strong>';
+    document.body && document.body.appendChild(o);
+    return o;
+  }
+
+  function addLine(txt){
+    try{
+      const o = makeOverlay();
+      const el = document.createElement('div');
+      el.textContent = `${(new Date()).toLocaleTimeString()} · ${txt}`;
+      o.appendChild(el);
+      o.scrollTop = o.scrollHeight;
+      // keep overlay lean
+      if(o.children.length > 90) o.removeChild(o.children[1]);
+    }catch(e){ console.warn('overlay append failed', e); }
+  }
+
+  // global error handlers
+  window.addEventListener('error', function(ev){
+    try{
+      addLine('Error: ' + (ev && ev.message ? ev.message : String(ev)));
+    }catch(e){}
+  });
+  window.addEventListener('unhandledrejection', function(ev){
+    try{
+      const reason = ev && ev.reason ? ev.reason : ev;
+      addLine('UnhandledRejection: ' + (reason && reason.message ? reason.message : String(reason)));
+    }catch(e){}
+  });
+
+  // when DOM ready, setup fallback start button if original doesn't appear
+  function setupFallback(){
+    try{
+      // small delay to allow original init to run
+      setTimeout(()=>{
+        const playArea = document.getElementById('play-area');
+        if(!playArea) {
+          addLine('play-area non trovato nel DOM');
+          return;
+        }
+        // if there's already a start button (our original), do nothing
+        const existing = Array.from(playArea.querySelectorAll('button')).find(b => /avvia/i.test(b.textContent));
+        if(existing){
+          addLine('Start button presente — non creo fallback');
+          return;
+        }
+        // create fallback button
+        const fb = document.createElement('button');
+        fb.textContent = 'Avvia (fallback)';
+        fb.dataset.fallback = '1';
+        fb.style.position = 'absolute';
+        fb.style.left = '50%';
+        fb.style.top = '50%';
+        fb.style.transform = 'translate(-50%,-50%)';
+        fb.style.zIndex = 999999;
+        fb.style.padding = '12px 16px';
+        fb.style.borderRadius = '10px';
+        playArea.appendChild(fb);
+        addLine('Fallback start button creata — toccala per avviare');
+        fb.addEventListener('click', async ()=>{
+          try{
+            if(window.audioCtx && audioCtx.state === 'suspended') await audioCtx.resume();
+          }catch(e){}
+          // try to call game start functions if available
+          try{
+            if(typeof startLevel === 'function'){
+              startLevel(1);
+              addLine('startLevel(1) invocata dal fallback');
+            } else {
+              addLine('startLevel non trovata');
+            }
+            if(typeof requestAnimationFrame === 'function' && typeof gameLoop === 'function'){
+              requestAnimationFrame(gameLoop);
+              addLine('gameLoop avviato dal fallback');
+            } else {
+              addLine('gameLoop non trovata; potrebbe essere ok se init gestisce RAF');
+            }
+            // remove fallback button after click
+            setTimeout(()=>{ if(fb.parentElement) fb.remove(); }, 300);
+          }catch(err){
+            addLine('Errore avvio fallback: ' + (err && err.message ? err.message : String(err)));
+          }
+        });
+      }, 600);
+    }catch(e){
+      addLine('setupFallback error: ' + (e && e.message ? e.message : String(e)));
+    }
+  }
+
+  if(document.readyState === 'complete' || document.readyState === 'interactive'){
+    setupFallback();
+  } else {
+    document.addEventListener('DOMContentLoaded', setupFallback);
+  }
+})();
+// --- end debug/recovery snippet ---
+
 // game.js — prototipo MVP per "Bombe"
 // Sostituisci interamente il file precedente con questo.
 
